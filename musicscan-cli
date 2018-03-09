@@ -20,6 +20,7 @@ import musicscan
 LOG_FILE = 'musicscan.log'
 PROCESSED_DIRS_FILE = 'processed-dirs.txt'
 SEPARATOR_WIDTH = 60
+SHORTEST_ALBUM_DIR_REGEX = re.compile(r'\w{3,}\ ?\w{3,}')
 
 
 def determine_color(evaluation=None, counts=None):
@@ -150,10 +151,10 @@ def generate_searches(release):
     )
     logging.info("dirpath_simplified (simplify_album) = '%s'", dirpath_simplified)
     # replace non alpha-numeric characters with spaces
-    dirpath_simplified = re.sub(r'\W', ' ', dirpath_simplified)
+    dirpath_simplified = musicscan.findmusiclocal.simplify_album(dirpath_simplified)
     logging.info("dirpath_simplified (re.sub) = '%s'", dirpath_simplified)
     # check if string contains at least some characters
-    if not re.search(r'\w{3,}\ ?\w{3,}', dirpath_simplified):
+    if not SHORTEST_ALBUM_DIR_REGEX.search(dirpath_simplified):
         dirpath_simplified = None
     # build searches
     searches = [
