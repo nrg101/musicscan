@@ -111,7 +111,7 @@ def evaluate_match(matches, music_threshold):
             matches["filename_matches_pct"] == 100:
         evaluation = "full"
     # otherwise if at least the music files match was above threshold
-    elif matches["filesize_matches_pct"] >= music_threshold:
+    elif matches["audio_filesize_matches_pct"] >= music_threshold:
         evaluation = "partial"
     # otherwise, no match, or below threshold
     else:
