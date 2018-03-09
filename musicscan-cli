@@ -1,0 +1,285 @@
+#!/usr/bin/env python
+
+# imports: standard
+import logging
+import json
+import sys
+
+# imports: third party
+from colorama import Fore, init
+
+# imports: custom
+import musicscan
+
+
+# constants
+LOG_FILE = 'musicscan.log'
+PROCESSED_DIRS_FILE = 'processed-dirs.txt'
+SEPARATOR_WIDTH = 60
+
+
+def determine_color(match_evaluation):
+    if match_evaluation:
+        if match_evaluation == "full":
+            color = Fore.GREEN
+        elif match_evaluation == "partial":
+            color = Fore.YELLOW
+        else:
+            color = Fore.RED
+    else:
+        color = Fore.RED
+    return color
+
+
+def add_processed_dir_record(path):
+    # append the path to the file
+    logging.debug("adding path '%s' to processed dirs file", path)
+    try:
+        with open(PROCESSED_DIRS_FILE, "a") as f:
+            f.write(path + "\n")
+    except Exception as e:
+        logging.error("could not add record of processed directory. %s", e)
+
+
+def get_processed_dirs():
+    lines = []
+    try:
+        with open(PROCESSED_DIRS_FILE, "r") as f:
+            lines = [ line.rstrip('\n') for line in f.readlines() ]
+    except Exception as e:
+        logging.error("could not read in processed dirs from %s. %s", PROCESSED_DIRS_FILE, e)
+    return lines
+
+
+def main():
+    # argparse
+    import argparse
+
+    # initialise colorama
+    init(autoreset=True)
+
+    # custom help subclass
+    class CustomHelpFormatter(argparse.HelpFormatter):
+        def __init__(self, prog):
+            super().__init__(prog, max_help_position=40, width=80)
+
+        def _format_action_invocation(self, action):
+            if not action.option_strings or action.nargs == 0:
+                return super()._format_action_invocation(action)
+            default = self._get_default_metavar_for_optional(action)
+            args_string = self._format_args(action, default)
+            return ', '.join(action.option_strings) + ' ' + args_string
+
+
+    # argparse custom help format
+    fmt = lambda prog: CustomHelpFormatter(prog)
+    # argparse parser
+    parser = argparse.ArgumentParser(
+            description='Scan directories for music folders and compare to WhatAPI',
+            formatter_class=fmt
+    )
+    # input path
+    parser.add_argument(
+            "inputpath",
+            help="path to scan"
+    )
+    # log level
+    parser.add_argument(
+            '-l', '--loglevel',
+            metavar='LOGLEVEL',
+            default='info',
+            choices=['debug', 'info', 'warning', 'error', 'critical'],
+            help='loglevel for log file (default: %(default)s)'
+    )
+    # output directory for downloaded torrent files
+    parser.add_argument(
+            '-o', '--output',
+            metavar='PATH',
+            default='.',
+            help='output path for .torrent files (default: %(default)s)'
+    )
+    # reset the record of processed directories
+    parser.add_argument(
+            '-r', '--reset',
+            action='store_true',
+            default=False,
+            help='scan all rather than skipping previously scanned'
+    )
+    # server URL
+    parser.add_argument(
+            '-s', '--server', 
+            metavar='URL',
+            default='https://redacted.ch',
+            help='server URL (default: %(default)s)'
+    )
+    # music file matching threshold
+    parser.add_argument(
+            '-t', '--threshold',
+            metavar='PCT',
+            type=int,
+            default=80,
+            help='matching local music threshold (default: %(default)s)'
+    )
+    # config file (for login details)
+    group_config = parser.add_argument_group("config file")
+    group_config.add_argument(
+            '-c', '--config',
+            metavar='FILE',
+            default='server.conf',
+            help='config file with login details (default: %(default)s)'
+    )
+    # login
+    group_login = parser.add_argument_group("login details")
+    # account password
+    group_login.add_argument(
+            '-p', '--password',
+            metavar='PASSWORD',
+            help='your password'
+    )
+    # account username
+    group_login.add_argument(
+            '-u', '--username',
+            metavar='USERNAME',
+            help='your username'
+    )
+    # parse arguments
+    args = parser.parse_args()
+    # set variables from args
+    root_path = args.inputpath
+    loglevel = args.loglevel
+    config_file = args.config
+    server = args.server
+    username = args.username
+    password = args.password
+    output_path = args.output
+    music_threshold = args.threshold
+    reset_processed_dirs = args.reset
+
+    # set up logging
+    numeric_level = getattr(logging, loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % loglevel)
+    logging.basicConfig(
+            format='%(asctime)s %(levelname)s:%(message)s',
+            filename=LOG_FILE,
+            filemode='w',
+            level=numeric_level
+    )
+
+    # reset processed dirs file if requested
+    if reset_processed_dirs:
+        # open in non-appended write mode and close, to clear contents
+        open(PROCESSED_DIRS_FILE, 'w').close()
+    # load processed dirs
+    processed_dirs = get_processed_dirs()
+
+    # load cookies
+    cookies = musicscan.cookies.get_cookies()
+    # if separate credentials given, disable config file
+    if username and password:
+        config_file = None
+    # temporary hack: parse config file (whatapi config parser broken for python3)
+    else:
+        username, password = musicscan.api.get_username_and_password(config_file)
+        config_file = None
+    
+    # connect to API
+    print("Getting connection to API...")
+    try:
+        api = musicscan.api.WhatAPIExtended(
+                config_file=config_file,
+                username=username,
+                password=password,
+                cookies=cookies,
+                server=server
+        )
+    except Exception as e:
+        print("API connection failed")
+        logging.error("API connection failed. %s", e)
+        # bail
+        sys.exit(1)
+    else:
+        print("API connection established")
+        logging.info("API connection success")
+    
+    # set torrent file save path
+    api.set_torrent_file_save_path(output_path)
+
+
+    # find local releases (directories with music files)
+    for release in musicscan.findmusiclocal.find_releases(root_path):
+        print("*" * SEPARATOR_WIDTH)
+        print("Processing '{0}'...".format(release["dirpath"]))
+        # check if this path has previously been processed
+        if release["dirpath"] in processed_dirs:
+            # if it's already been processed, skip
+            print("- skipping as has been previously processed")
+        else:
+            # attempt a basic identification of the release, add as tags
+            print("- identifying from tags...")
+            release["tags"] = musicscan.findmusiclocal.get_release_basics(release["music_files"])
+            # search API
+            populated_tags = [ "{0}: {1}".format(k,v) for k,v in release["tags"].items() if v != None ]
+            print("- searching API. Tags = {0}".format(", ".join(populated_tags)))
+            search_results = api.search_from_release(release)
+            print("-- search results: {0}".format(len(search_results)))
+            # show each torrent group
+            for group in search_results:
+                # check for single or multiple torrents
+                if "torrents" in group:
+                    group_torrents = group["torrents"]
+                elif "torrentId" in group:
+                    group_torrents = [ group ]
+                else:
+                    group_torrents = []
+                print("--- {group_artist} - {group_name} ({year}): {torrent_count} {torrent_plural}".format(
+                        group_artist = group.get("artist", None),
+                        group_name = group["groupName"],
+                        year = group.get("groupYear", None),
+                        torrent_count = len(group_torrents),
+                        torrent_plural = "torrent" if len(group_torrents) == 1 else "torrents"
+                ))
+                # iterate through torrents in the group
+                for group_torrent in group_torrents:
+                    print("---- checking torrent {0}".format(group_torrent["torrentId"]))
+                    torrent_object = api.get_torrent_object(group_torrent["torrentId"])
+                    print("----- torrent filePath: {0}".format(torrent_object.get("filePath", None)))
+                    # parse torrent file list
+                    torrent_files = musicscan.filecompare.parse_torrent_files(torrent_object["fileList"])
+                    # attempt to match torrent files to local files
+                    torrent_match = musicscan.filecompare.match_torrent_files(torrent_files, release)
+                    # evaluate match
+                    match_evaluation = musicscan.filecompare.evaluate_match(torrent_match, music_threshold)
+                    print("{color}----- torrent file match: by size (music) = {0}%, by size (all) = {1}%, by name {2}%".format(
+                            torrent_match["music_filesize_matches_pct"],
+                            torrent_match["filesize_matches_pct"],
+                            torrent_match["filename_matches_pct"],
+                            color = determine_color(match_evaluation)
+                    ))
+                    # if match evaluation is partial/full, download the torrent
+                    if match_evaluation:
+                        # set torrent filename
+                        torrent_filename = '{torrent_name}.{id}.torrent'.format(
+                                torrent_name = torrent_object.get("filePath", "missing_filePath"),
+                                id = torrent_object["id"]
+                        )
+                        print("------ match = {0}. Downloading torrent file: '{1}'".format(
+                                match_evaluation,
+                                torrent_filename
+                        ))
+                        # save torrent file
+                        logging.info("Saving torrent file: '%s'", torrent_filename)
+                        api.save_torrent(torrent_object["id"], torrent_filename)
+            # end of processing of this release
+            logging.info("end of processing for this release")
+            add_processed_dir_record(release["dirpath"])
+
+    
+    # show summary
+    print("*" * SEPARATOR_WIDTH)
+    print("Summary:\n")
+    print("torrent files saved: {0}".format(api.torrent_files_written))
+
+
+if __name__ == "__main__":
+    main()

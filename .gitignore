@@ -1,0 +1,6 @@
+*.log
+*.torrent
+server.conf
+**/__pycache__/
+cookies.dat
+processed-dirs.txt
