@@ -146,10 +146,6 @@ def generate_searches(release):
                     groupname=release["tags"]["album"],
                     year=release["tags"]["year"],
                     format=release["tags"]["audio_format"]
-            ),
-            dict(
-                    groupname=release["tags"]["album"],
-                    format=release["tags"]["audio_format"]
             )
     ]
 
