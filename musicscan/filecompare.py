@@ -80,25 +80,16 @@ def match_torrent_files(torrent_files, release):
     # calculate matches percentage
     try:
         audio_filesize_matches_pct = round(100 * len(audio_filesize_matches) / len(torrent_audio_file_sizes), 2)
-    except ZeroDivisionError:
-        logging.error("torrent_audio_file_sizes = 0")
-        audio_filesize_matches_pct = 0
     except Exception as e:
         logging.error("failed calculating percentage. %s", e)
         audio_filesize_matches_pct = 0
     try:
         filesize_matches_pct = round(100 * len(filesize_matches) / len(torrent_files), 2)
-    except ZeroDivisionError:
-        logging.error("torrent_files = 0")
-        filesize_matches_pct = 0
     except Exception as e:
         logging.error("failed calculating percentage. %s", e)
         filesize_matches_pct = 0
     try:
         filename_matches_pct = round(100 * len(filename_matches) / len(torrent_files), 2)
-    except ZeroDivisionError:
-        logging.error("torrent_files = 0")
-        filename_matches_pct = 0
     except Exception as e:
         logging.error("failed calculating percentage. %s", e)
         filename_matches_pct = 0
