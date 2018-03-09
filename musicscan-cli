@@ -4,6 +4,7 @@
 import logging
 import json
 import sys
+import html
 
 # imports: third party
 from colorama import Fore, init
@@ -233,8 +234,8 @@ def main():
                 else:
                     group_torrents = []
                 print("--- {group_artist} - {group_name} ({year}): {torrent_count} {torrent_plural}".format(
-                        group_artist = group.get("artist", None),
-                        group_name = group["groupName"],
+                        group_artist = html.unescape(group.get("artist", "(no artist)")),
+                        group_name = html.unescape(group["groupName"]),
                         year = group.get("groupYear", None),
                         torrent_count = len(group_torrents),
                         torrent_plural = "torrent" if len(group_torrents) == 1 else "torrents"
@@ -243,7 +244,8 @@ def main():
                 for group_torrent in group_torrents:
                     print("---- checking torrent {0}".format(group_torrent["torrentId"]))
                     torrent_object = api.get_torrent_object(group_torrent["torrentId"])
-                    print("----- torrent filePath: {0}".format(torrent_object.get("filePath", None)))
+                    torrent_filepath_unescaped = html.unescape(torrent_object.get("filePath", "missing_filePath"))
+                    print("----- torrent filePath: {0}".format(torrent_filepath_unescaped))
                     # parse torrent file list
                     torrent_files = musicscan.filecompare.parse_torrent_files(torrent_object["fileList"])
                     # attempt to match torrent files to local files
@@ -260,7 +262,7 @@ def main():
                     if match_evaluation:
                         # set torrent filename
                         torrent_filename = '{torrent_name}.{id}.torrent'.format(
-                                torrent_name = torrent_object.get("filePath", "missing_filePath"),
+                                torrent_name = torrent_filepath_unescaped,
                                 id = torrent_object["id"]
                         )
                         print("------ match = {0}. Downloading torrent file: '{1}'".format(
