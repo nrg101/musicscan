@@ -13,7 +13,7 @@ from dateutil.parser import parse as dtparse    # pip install python-dateutil
 
 # constants
 EXTENSIONS = ('.flac', '.mp3', '.aac', '.ac3', '.dts')
-DISC_SUBFOLDER_REGEX = re.compile(r"(cd|disc|disk)[-_\ ]?\d+", flags=re.IGNORECASE)
+DISC_SUBFOLDER_REGEX = re.compile(r".*(cd|disc|disk)[-_\ ]?\d+.*", flags=re.IGNORECASE)
 
 
 def simplify_album(album):
