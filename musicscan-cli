@@ -5,6 +5,7 @@ import logging
 import json
 import sys
 import html
+from collections import Counter
 
 # imports: third party
 from colorama import Fore, init
@@ -19,11 +20,18 @@ PROCESSED_DIRS_FILE = 'processed-dirs.txt'
 SEPARATOR_WIDTH = 60
 
 
-def determine_color(match_evaluation):
-    if match_evaluation:
-        if match_evaluation == "full":
+def determine_color(evaluation=None, counts=None):
+    if evaluation:
+        if evaluation == "full":
             color = Fore.GREEN
-        elif match_evaluation == "partial":
+        elif evaluation == "partial":
+            color = Fore.YELLOW
+        else:
+            color = Fore.RED
+    elif counts:
+        if counts["full"] > 0:
+            color = Fore.GREEN
+        elif counts["partial"] > 0:
             color = Fore.YELLOW
         else:
             color = Fore.RED
@@ -50,6 +58,142 @@ def get_processed_dirs():
     except Exception as e:
         logging.error("could not read in processed dirs from %s. %s", PROCESSED_DIRS_FILE, e)
     return lines
+
+
+def download_torrent_file(torrent_id, torrent_name, api):
+    # set torrent filename
+    torrent_filename = '{0}.{1}.torrent'.format(torrent_name, torrent_id)
+    print("------- Downloading torrent file: '{0}'".format(torrent_filename))
+    # save torrent file
+    logging.info("Saving torrent file: '%s'", torrent_filename)
+    api.save_torrent(torrent_id, torrent_filename)
+
+
+def get_group_torrents(group):
+    if "torrents" in group:
+        group_torrents = group["torrents"]
+    elif "torrentId" in group:
+        group_torrents = [ group ]
+    else:
+        group_torrents = []
+    return group_torrents
+
+
+# search API and attempt to match
+def search_and_match(api, release, music_threshold, searched_torrent_ids, **kwargs):
+    # initialise
+    search_match_evaluations = []
+    # perform search
+    search_result = api.torrent_search(**kwargs)
+    print("-- search result groups: {0}".format(len(search_result)))
+    # show each torrent group
+    for group in search_result:
+        # get torrents from group
+        group_torrents = get_group_torrents(group)
+        print("--- {group_artist} - {group_name} ({year}): {torrent_count} {torrent_plural}".format(
+                group_artist = html.unescape(group.get("artist", "(no artist)")),
+                group_name = html.unescape(group["groupName"]),
+                year = group.get("groupYear", None),
+                torrent_count = len(group_torrents),
+                torrent_plural = "torrent" if len(group_torrents) == 1 else "torrents"
+        ))
+        # iterate through torrents in the group
+        for group_torrent in group_torrents:
+            if group_torrent["torrentId"] in searched_torrent_ids:
+                print("---- skipping torrent {0}, as already checked".format(group_torrent["torrentId"]))
+            else:
+                print("---- checking torrent {0}".format(group_torrent["torrentId"]))
+                torrent_object = api.torrent(group_torrent["torrentId"])
+                torrent_filepath_unescaped = html.unescape(torrent_object.get("filePath", "missing_filePath"))
+                print("----- torrent filePath: {0}".format(torrent_filepath_unescaped))
+                # parse torrent file list
+                torrent_files = musicscan.filecompare.parse_torrent_files(torrent_object["fileList"])
+                # attempt to match torrent files to local files
+                torrent_match = musicscan.filecompare.match_torrent_files(torrent_files, release)
+                # evaluate match
+                match_evaluation = musicscan.filecompare.evaluate_match(torrent_match, music_threshold)
+                print("{color}----- torrent file match: by size (music) = {0}%, by size (all) = {1}%, by name {2}%".format(
+                        torrent_match["audio_filesize_matches_pct"],
+                        torrent_match["filesize_matches_pct"],
+                        torrent_match["filename_matches_pct"],
+                        color = determine_color(evaluation=match_evaluation)
+                ))
+                logging.info("match_evaluation = %s", match_evaluation)
+                # if match evaluation is partial/full, download the torrent
+                if match_evaluation:
+                    print("------ match = {0}".format(match_evaluation))
+                    # save torrent
+                    download_torrent_file(group_torrent["torrentId"], torrent_filepath_unescaped, api)
+                # append to list
+                search_match_evaluations.append(match_evaluation)
+                searched_torrent_ids.add(group_torrent["torrentId"])
+                
+    # return
+    return {
+        "evaluations": search_match_evaluations,
+        "torrent_ids": searched_torrent_ids
+    }
+
+
+def generate_searches(release):
+    return [
+            dict(
+                    artistname=release["tags"]["artist"],
+                    groupname=release["tags"]["album"],
+                    format=release["tags"]["audio_format"]
+            ),
+            dict(
+                    groupname=release["tags"]["album"],
+                    year=release["tags"]["year"],
+                    format=release["tags"]["audio_format"]
+            ),
+            dict(
+                    groupname=release["tags"]["album"],
+                    format=release["tags"]["audio_format"]
+            )
+    ]
+
+
+def process_release(release, api, music_threshold, processed_dirs):
+    # initialise list of match evaluations for this release
+    release_match_evaluations = []
+    # initialise set of searched IDs for this release
+    release_searched_ids = set()
+    # start console output
+    print("*" * SEPARATOR_WIDTH)
+    print("Processing '{0}'...".format(release["dirpath"]))
+    # check if this path has previously been processed
+    if release["dirpath"] in processed_dirs:
+        # if it's already been processed, skip
+        logging.info("%s found in processed_dirs. skipping", release["dirpath"])
+        print("- skipping as has been previously processed")
+    else:
+        # attempt a basic identification of the release, add as tags
+        release["tags"] = musicscan.findmusiclocal.get_release_basics(release["audio_files"])
+        populated_tags = [ "{0}: {1}".format(k,v) for k,v in release["tags"].items() if v != None ]
+        print("- essential tags = {0}".format(", ".join(populated_tags)))
+
+        # search and match
+        for search_fields in generate_searches(release):
+            logging.info("searching API for: %s", search_fields)
+            print("- searching API for: {0}".format(search_fields))
+            search_matches = search_and_match(api, release, music_threshold, release_searched_ids, **search_fields)
+            # show evaluation counts
+            counts = Counter(search_matches["evaluations"])
+            print("{color}---- match summary. full: {0}, partial: {1}, no match: {2}".format(
+                    counts["full"], counts["partial"], counts[None], color=determine_color(counts=counts)
+            ))
+            release_match_evaluations.extend(search_matches["evaluations"])
+            # check if release has any full matches yet
+            if "full" in release_match_evaluations:
+                # break out of for loop to abort further searches
+                break
+            # add searched IDs to set (to avoid repeating checking the same torrents)
+            release_searched_ids.update(search_matches["torrent_ids"])
+
+        # end of processing of this release
+        logging.info("end of processing for this release")
+        add_processed_dir_record(release["dirpath"])
 
 
 def main():
@@ -209,74 +353,8 @@ def main():
 
     # find local releases (directories with music files)
     for release in musicscan.findmusiclocal.find_releases(root_path):
-        print("*" * SEPARATOR_WIDTH)
-        print("Processing '{0}'...".format(release["dirpath"]))
-        # check if this path has previously been processed
-        if release["dirpath"] in processed_dirs:
-            # if it's already been processed, skip
-            print("- skipping as has been previously processed")
-        else:
-            # attempt a basic identification of the release, add as tags
-            print("- identifying from tags...")
-            release["tags"] = musicscan.findmusiclocal.get_release_basics(release["music_files"])
-            # search API
-            populated_tags = [ "{0}: {1}".format(k,v) for k,v in release["tags"].items() if v != None ]
-            print("- searching API. Tags = {0}".format(", ".join(populated_tags)))
-            search_results = api.search_from_release(release)
-            print("-- search results: {0}".format(len(search_results)))
-            # show each torrent group
-            for group in search_results:
-                # check for single or multiple torrents
-                if "torrents" in group:
-                    group_torrents = group["torrents"]
-                elif "torrentId" in group:
-                    group_torrents = [ group ]
-                else:
-                    group_torrents = []
-                print("--- {group_artist} - {group_name} ({year}): {torrent_count} {torrent_plural}".format(
-                        group_artist = html.unescape(group.get("artist", "(no artist)")),
-                        group_name = html.unescape(group["groupName"]),
-                        year = group.get("groupYear", None),
-                        torrent_count = len(group_torrents),
-                        torrent_plural = "torrent" if len(group_torrents) == 1 else "torrents"
-                ))
-                # iterate through torrents in the group
-                for group_torrent in group_torrents:
-                    print("---- checking torrent {0}".format(group_torrent["torrentId"]))
-                    torrent_object = api.torrent(group_torrent["torrentId"])
-                    torrent_filepath_unescaped = html.unescape(torrent_object.get("filePath", "missing_filePath"))
-                    print("----- torrent filePath: {0}".format(torrent_filepath_unescaped))
-                    # parse torrent file list
-                    torrent_files = musicscan.filecompare.parse_torrent_files(torrent_object["fileList"])
-                    # attempt to match torrent files to local files
-                    torrent_match = musicscan.filecompare.match_torrent_files(torrent_files, release)
-                    # evaluate match
-                    match_evaluation = musicscan.filecompare.evaluate_match(torrent_match, music_threshold)
-                    print("{color}----- torrent file match: by size (music) = {0}%, by size (all) = {1}%, by name {2}%".format(
-                            torrent_match["music_filesize_matches_pct"],
-                            torrent_match["filesize_matches_pct"],
-                            torrent_match["filename_matches_pct"],
-                            color = determine_color(match_evaluation)
-                    ))
-                    # if match evaluation is partial/full, download the torrent
-                    if match_evaluation:
-                        # set torrent filename
-                        torrent_filename = '{torrent_name}.{id}.torrent'.format(
-                                torrent_name = torrent_filepath_unescaped,
-                                id = torrent_object["id"]
-                        )
-                        print("------ match = {0}. Downloading torrent file: '{1}'".format(
-                                match_evaluation,
-                                torrent_filename
-                        ))
-                        # save torrent file
-                        logging.info("Saving torrent file: '%s'", torrent_filename)
-                        api.save_torrent(torrent_object["id"], torrent_filename)
-            # end of processing of this release
-            logging.info("end of processing for this release")
-            add_processed_dir_record(release["dirpath"])
+        process_release(release, api, music_threshold, processed_dirs)
 
-    
     # show summary
     print("*" * SEPARATOR_WIDTH)
     print("Summary:\n")

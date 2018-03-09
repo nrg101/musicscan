@@ -54,6 +54,38 @@ class WhatAPIExtended(whatapi.WhatAPI):
         # return torrent object
         return torrent_object
 
+
+    # torrent search
+    def torrent_search(self, **kwargs):
+        logging.info("**** BEGIN torrent_search() *****")
+        # initialise results
+        results = []
+        # search
+        logging.info("searching with fields: %s", kwargs)
+        search = self.request('browse', **kwargs)
+        # get results from search
+        results = self._get_results(search)
+        # check for multiple pages
+        pages = search["response"].get("pages", None)
+        if pages and pages > 1:
+            logging.info("Multiple pages of search response")
+            # get remaining pages (range(2, pages+1) will do up to pages, not pages+1
+            for page in range(2, pages+1):
+                # change page number in search terms
+                kwargs.update({'page': page})
+                # search
+                logging.info("searching with fields: %s", kwargs)
+                search = self.request('browse', **kwargs)
+                # get results from search and add to existing results
+                try:
+                    results.extend(self._get_results(search))
+                except Exception as e:
+                    logging.error("Could not combine subsequent search page results. %s", e)
+        # return search
+        logging.debug("Search results:\n%s", json.dumps(results, indent=4))
+        return results
+        
+
     # search from release
     def search_from_release(self, release):
         logging.info("***** BEGIN search_from_release *****")
