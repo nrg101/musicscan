@@ -161,21 +161,29 @@ def generate_searches(release):
             dict(
                     artistname=release["tags"]["artist"],
                     groupname=release["tags"]["album"],
-                    format=release["tags"]["audio_format"]
+                    format=release["tags"]["audio_format"],
+                    haslog=release["has_log"],
+                    hascue=release["has_cue"]
             ),
             dict(
                     groupname=release["tags"]["album"],
                     year=release["tags"]["year"],
-                    format=release["tags"]["audio_format"]
+                    format=release["tags"]["audio_format"],
+                    haslog=release["has_log"],
+                    hascue=release["has_cue"]
             ),
             dict(
                     searchstr=dirpath_simplified,
                     year=release["tags"]["year"],
-                    format=release["tags"]["audio_format"]
+                    format=release["tags"]["audio_format"],
+                    haslog=release["has_log"],
+                    hascue=release["has_cue"]
             ),
             dict(
                     searchstr=dirpath_simplified,
-                    format=release["tags"]["audio_format"]
+                    format=release["tags"]["audio_format"],
+                    haslog=release["has_log"],
+                    hascue=release["has_cue"]
             )
     ]
     logging.debug("generated searches (before filtering):\n%s", json.dumps(searches, indent=2))
@@ -209,7 +217,9 @@ def process_release(release, api, music_threshold, processed_dirs):
         # search and match
         for search_fields in generate_searches(release):
             logging.info("searching API for: %s", search_fields)
-            print("- searching API for: {0}".format(search_fields))
+            print("- searching API for: {0}".format(
+                    ", ".join([ "{0}={1}".format(k,v) for k,v in search_fields.items() ])
+            ))
             search_matches = search_and_match(api, release, music_threshold, release_searched_ids, **search_fields)
             # show evaluation counts
             counts = Counter(search_matches["evaluations"])
@@ -386,6 +396,7 @@ def main():
 
     # find local releases (directories with music files)
     for release in musicscan.findmusiclocal.find_releases(root_path):
+        logging.info("release:\n%s", json.dumps(release, indent=2))
         process_release(release, api, music_threshold, processed_dirs)
 
     # show summary

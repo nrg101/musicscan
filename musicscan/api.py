@@ -84,82 +84,8 @@ class WhatAPIExtended(whatapi.WhatAPI):
         # return search
         logging.debug("Search results:\n%s", json.dumps(results, indent=4))
         return results
-        
 
-    # search from release
-    def search_from_release(self, release):
-        logging.info("***** BEGIN search_from_release *****")
-        logging.info("release: %s", release)
-        # initialise results
-        results = []
-        # whatapi search
-        # try searching for artist and album
-        if release["tags"]["album"] != None:
-            logging.info(
-                    "Searching by Artist '%s'. Album name '%s'. Format = %s",
-                    release["tags"]["artist"],
-                    release["tags"]["album"],
-                    release["tags"]["audio_format"]
-            )
-            search = self.request(
-                    'browse',
-                    artistname=release["tags"]["artist"],
-                    groupname=release["tags"]["album"],
-                    format=release["tags"]["audio_format"]
-            )
-            results = self._get_results(search)
-        # if no results yet, search by album name (and year and format if present)
-        if len(results) == 0:
-            logging.debug('release["tags"]["album"]: %s', release["tags"]["album"])
-            if release["tags"]["album"] != None:
-                logging.info(
-                        "Searching by album name '%s'. Year = %s. Format = %s",
-                        release["tags"]["album"],
-                        release["tags"]["year"],
-                        release["tags"]["audio_format"]
-                )
-                search = self.request(
-                        'browse',
-                        groupname=release["tags"]["album"],
-                        year=release["tags"]["year"],
-                        format=release["tags"]["audio_format"]
-                )
-                results = self._get_results(search)
-        # if no results yet, search by artist and year (and format if present)
-        if len(results) == 0:
-            if release["tags"]["artist"] != None and release["tags"]["year"] != None:
-                logging.info(
-                        "Searching by artist '%s' and year '%s'. Format = %s",
-                        release["tags"]["artist"],
-                        release["tags"]["year"],
-                        release["tags"]["audio_format"]
-                )
-                search = self.request(
-                        'browse',
-                        artistname=release["tags"]["artist"],
-                        year=release["tags"]["year"],
-                        format=release["tags"]["audio_format"]
-                )
-                results = self._get_results(search)
-        # if no results yet, search by the folder name (simplified) (and year and format if present)
-        if len(results) == 0:
-            logging.info(
-                    "Searching by folder name (simplified) '%s'. Year = %s. Format = %s",
-                    release["dirpath_simplified"],
-                    release["tags"]["year"],
-                    release["tags"]["audio_format"]
-            )
-            search = self.request(
-                    'browse',
-                    searchstr=release["dirpath_simplified"],
-                    year=release["tags"]["year"],
-                    format=release["tags"]["audio_format"]
-            )
-            results = self._get_results(search)
-        # return search
-        logging.debug("Search results:\n%s", json.dumps(results, indent=4))
-        return results
-    
+
     # set torrent file save path
     def set_torrent_file_save_path(self, path):
         self.torrent_file_save_path = path

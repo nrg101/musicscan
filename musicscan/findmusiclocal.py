@@ -15,7 +15,7 @@ from dateutil.parser import parse as dtparse    # pip install python-dateutil
 EXTENSIONS = ('.flac', '.mp3', '.aac', '.ac3', '.dts')
 DISC_SUBFOLDER_REGEX = re.compile(r"(?<![A-Za-z0-9])(cd|disc|disk)[-_\ ]?\d{1,2}(?![A-Za-z0-9]+)", flags=re.IGNORECASE)
 SIMPLIFY_ALBUM_REGEX = re.compile(
-        r'[\(\[](flac|wav|ogg|aac|m4a|m4b|m4p|mp4|mp3|v0|v1|v2|v3|320|256|224|192|128|96|64|48|\-|_\.)*[\)\]]|(cd|disc|disk) ?\d+|[\[\]\(\)\-]',
+        r'(flac|wav|ogg|aac|m4a|m4b|m4p|mp4|mp3|v0|v1|v2|v3|320|256|224|192|128|96|64|48)|((19|20)\d{2})|(cd|disc|disk) ?\d+|[\[\]\(\)\-]',
         flags=re.IGNORECASE
 )
 
@@ -31,6 +31,30 @@ def is_audio_file(filename):
     is_audio_file = extension.lower() in EXTENSIONS
     logging.debug("%s %s a music file", filename, "is" if is_audio_file else "isn't")
     return is_audio_file
+
+
+def is_log_file(filename):
+    # split filename to name (ignored) and extension
+    _, extension = os.path.splitext(filename)
+    return extension == ".log"
+
+
+def is_cue_file(filename):
+    # split filename to name (ignored) and extension
+    _, extension = os.path.splitext(filename)
+    return extension == ".cue"
+
+
+def has_log(filenames):
+    log_files = [ f for f in filenames if is_log_file(f) ]
+    # api: 1 is true, 0 is false
+    return 1 if len(log_files) > 0 else 0
+
+
+def has_cue(filenames):
+    cue_files = [ f for f in filenames if is_log_file(f) ]
+    # api: 1 is true, 0 is false
+    return 1 if len(cue_files) > 0 else 0
 
 
 def find_audio_files(path):
@@ -139,7 +163,8 @@ def get_release_basics(audio_files):
 def find_releases(path):
     logging.info("***** BEGIN find_releases() *****")
     # traverse paths
-    for dirpath, _, filenames in os.walk(path, topdown=True):
+    for dirpath, subdirs, filenames in os.walk(path, topdown=True):
+        logging.info("%s has %s subdirs and %s filenames", path, len(subdirs), len(filenames))
         # check for presence of music files
         for fn in filenames:
             audio_files = [ os.path.join(dirpath, fn) for fn in filenames if is_audio_file(fn) ]
@@ -150,6 +175,8 @@ def find_releases(path):
                 "dirpath": dirpath,
                 "dirpath_simplified": simplify_album(os.path.basename(os.path.normpath(dirpath))),
                 "audio_files": audio_files,
-                "all_files": find_all_files(dirpath)
+                "all_files": [ os.path.join(dirpath, fn) for fn in filenames ],
+                "has_log": has_log(filenames),
+                "has_cue": has_cue(filenames)
             }
     logging.info("***** END find_releases() *****")
