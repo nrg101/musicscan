@@ -117,6 +117,11 @@ def get_release_basics(music_files):
         logging.debug("no artists found")
         most_common_artist = None
     logging.debug("most_common_artist: %s", most_common_artist)
+    # replace non alpha-numeric characters with space to avoid search misses for symbols
+    if album:
+        album = re.sub('\W', ' ', album)
+    if most_common_artist:
+        most_common_artist = re.sub('\W', ' ', most_common_artist)
     # return the basic info
     basic_info = {
         "artist": most_common_artist,
@@ -124,6 +129,7 @@ def get_release_basics(music_files):
         "year": year,
         "audio_format": audio_format
     }
+    logging.debug("basic_info: %s", basic_info)
     logging.info("***** END get_release_basics() *****")
     return basic_info
 
