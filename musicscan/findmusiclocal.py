@@ -13,7 +13,7 @@ from dateutil.parser import parse as dtparse    # pip install python-dateutil
 
 # constants
 EXTENSIONS = ('.flac', '.mp3', '.aac', '.ac3', '.dts')
-DISC_SUBFOLDER_REGEX = re.compile(r".*(cd|disc|disk)[-_\ ]?\d+.*", flags=re.IGNORECASE)
+DISC_SUBFOLDER_REGEX = re.compile(r"(?<![A-Za-z0-9])(cd|disc|disk)[-_\ ]?\d{1,2}(?![A-Za-z0-9]+)", flags=re.IGNORECASE)
 
 
 def simplify_album(album):
@@ -140,6 +140,7 @@ def find_releases(path):
             logging.debug("'%s' is deemed as not a disc subfolder", path_tail)
             # create list of subfolders that are disc subfolders
             disc_subfolders = [ s for s in subdirs if is_disc_subfolder(s) ]
+            logging.debug("%s has the following disc subfolders: %s", path_tail, disc_subfolders)
             # if the current path is a leaf, or has disc subfolders
             if len(subdirs) == 0 or len(disc_subfolders) > 0:
                 logging.debug("%s is a leaf or has disc subfolders", dirpath)
