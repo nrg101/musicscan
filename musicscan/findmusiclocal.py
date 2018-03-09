@@ -14,16 +14,14 @@ from dateutil.parser import parse as dtparse    # pip install python-dateutil
 # constants
 EXTENSIONS = ('.flac', '.mp3', '.aac', '.ac3', '.dts')
 DISC_SUBFOLDER_REGEX = re.compile(r"(?<![A-Za-z0-9])(cd|disc|disk)[-_\ ]?\d{1,2}(?![A-Za-z0-9]+)", flags=re.IGNORECASE)
-
+SIMPLIFY_ALBUM_REGEX = re.compile(
+        r'[\(\[](flac|wav|ogg|aac|m4a|m4b|m4p|mp4|mp3|v0|v1|v2|v3|320|256|224|192|128|96|64|48|\-|_\.)*[\)\]]|(cd|disc|disk) ?\d+|[\[\]\(\)\-]',
+        flags=re.IGNORECASE
+)
 
 def simplify_album(album):
     # remove (), [], cd x, disc x, and resulting whitespace at ends
-    return re.sub(
-            r'(\([^\)]*\)|\[[^\]]*\]|(cd|disc) ?\d+)', 
-            '', 
-            album, 
-            flags=re.IGNORECASE
-    ).strip()
+    return SIMPLIFY_ALBUM_REGEX.sub('', album).strip()
 
 
 def is_audio_file(filename):
