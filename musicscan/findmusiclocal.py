@@ -45,16 +45,14 @@ def is_cue_file(filename):
     return extension == ".cue"
 
 
-def has_log(path):
-    for _, _, filenames in os.walk(path):
-        log_files = [ f for f in filenames if is_log_file(f) ]
+def has_log(filenames):
+    log_files = [ f for f in filenames if is_log_file(f) ]
     # api: 1 is true, 0 is false
     return 1 if len(log_files) > 0 else 0
 
 
-def has_cue(path):
-    for _, _, filenames in os.walk(path):
-        cue_files = [ f for f in filenames if is_log_file(f) ]
+def has_cue(filenames):
+    cue_files = [ f for f in filenames if is_log_file(f) ]
     # api: 1 is true, 0 is false
     return 1 if len(cue_files) > 0 else 0
 
@@ -165,7 +163,8 @@ def get_release_basics(audio_files):
 def find_releases(path):
     logging.info("***** BEGIN find_releases() *****")
     # traverse paths
-    for dirpath, _, filenames in os.walk(path, topdown=True):
+    for dirpath, subdirs, filenames in os.walk(path, topdown=True):
+        logging.info("%s has %s subdirs and %s filenames", path, len(subdirs), len(filenames))
         # check for presence of music files
         for fn in filenames:
             audio_files = [ os.path.join(dirpath, fn) for fn in filenames if is_audio_file(fn) ]
@@ -176,8 +175,8 @@ def find_releases(path):
                 "dirpath": dirpath,
                 "dirpath_simplified": simplify_album(os.path.basename(os.path.normpath(dirpath))),
                 "audio_files": audio_files,
-                "all_files": find_all_files(dirpath),
-                "has_log": has_log(dirpath),
-                "has_cue": has_cue(dirpath)
+                "all_files": [ os.path.join(dirpath, fn) for fn in filenames ],
+                "has_log": has_log(filenames),
+                "has_cue": has_cue(filenames)
             }
     logging.info("***** END find_releases() *****")
