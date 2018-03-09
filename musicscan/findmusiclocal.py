@@ -33,6 +33,32 @@ def is_audio_file(filename):
     return is_audio_file
 
 
+def is_log_file(filename):
+    # split filename to name (ignored) and extension
+    _, extension = os.path.splitext(filename)
+    return extension == ".log"
+
+
+def is_cue_file(filename):
+    # split filename to name (ignored) and extension
+    _, extension = os.path.splitext(filename)
+    return extension == ".cue"
+
+
+def has_log(path):
+    for _, _, filenames in os.walk(path):
+        log_files = [ f for f in filenames if is_log_file(f) ]
+    # api: 1 is true, 0 is false
+    return 1 if len(log_files) > 0 else 0
+
+
+def has_cue(path):
+    for _, _, filenames in os.walk(path):
+        cue_files = [ f for f in filenames if is_log_file(f) ]
+    # api: 1 is true, 0 is false
+    return 1 if len(cue_files) > 0 else 0
+
+
 def find_audio_files(path):
     audio_files = []
     # traverse all files in path
@@ -150,6 +176,8 @@ def find_releases(path):
                 "dirpath": dirpath,
                 "dirpath_simplified": simplify_album(os.path.basename(os.path.normpath(dirpath))),
                 "audio_files": audio_files,
-                "all_files": find_all_files(dirpath)
+                "all_files": find_all_files(dirpath),
+                "has_log": has_log(dirpath),
+                "has_cue": has_cue(dirpath)
             }
     logging.info("***** END find_releases() *****")

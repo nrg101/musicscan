@@ -161,21 +161,29 @@ def generate_searches(release):
             dict(
                     artistname=release["tags"]["artist"],
                     groupname=release["tags"]["album"],
-                    format=release["tags"]["audio_format"]
+                    format=release["tags"]["audio_format"],
+                    haslog=release["has_log"],
+                    hascue=release["has_cue"]
             ),
             dict(
                     groupname=release["tags"]["album"],
                     year=release["tags"]["year"],
-                    format=release["tags"]["audio_format"]
+                    format=release["tags"]["audio_format"],
+                    haslog=release["has_log"],
+                    hascue=release["has_cue"]
             ),
             dict(
                     searchstr=dirpath_simplified,
                     year=release["tags"]["year"],
-                    format=release["tags"]["audio_format"]
+                    format=release["tags"]["audio_format"],
+                    haslog=release["has_log"],
+                    hascue=release["has_cue"]
             ),
             dict(
                     searchstr=dirpath_simplified,
-                    format=release["tags"]["audio_format"]
+                    format=release["tags"]["audio_format"],
+                    haslog=release["has_log"],
+                    hascue=release["has_cue"]
             )
     ]
     logging.debug("generated searches (before filtering):\n%s", json.dumps(searches, indent=2))
@@ -386,6 +394,7 @@ def main():
 
     # find local releases (directories with music files)
     for release in musicscan.findmusiclocal.find_releases(root_path):
+        logging.info("release:\n%s", release)
         process_release(release, api, music_threshold, processed_dirs)
 
     # show summary
