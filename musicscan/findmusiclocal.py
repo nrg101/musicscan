@@ -26,22 +26,26 @@ def simplify_album(album):
     ).strip()
 
 
-def is_music_file(filename):
+def is_audio_file(filename):
     # split filename to name (ignored) and extension
     _, extension = os.path.splitext(filename)
     # check if extension is in list of valid music types
-    is_music_file = extension.lower() in EXTENSIONS
-    logging.debug("%s %s a music file", filename, "is" if is_music_file else "isn't")
-    return is_music_file
+    is_audio_file = extension.lower() in EXTENSIONS
+    logging.debug("%s %s a music file", filename, "is" if is_audio_file else "isn't")
+    return is_audio_file
 
 
-def find_music_files(path):
-    music_files = []
+def find_audio_files(path):
+    audio_files = []
     # traverse all files in path
     for dirpath, _, filenames in os.walk(path):
-        # list comprehension of music files, extend music_files list
-        music_files.extend([ os.path.join(dirpath, f) for f in filenames if is_music_file(f) ])
-    return music_files
+        # list comprehension of music files, extend audio_files list
+        audio_files.extend([ os.path.join(dirpath, f) for f in filenames if is_audio_file(f) ])
+    return audio_files
+
+
+def filter_audio_files(filenames):
+    return [ f for f in filenames if is_audio_file(f) ]
 
 
 def find_all_files(path):
@@ -60,13 +64,13 @@ def is_disc_subfolder(dirname):
 """
 Get a release's basic info by looking at the tags of each track
 """
-def get_release_basics(music_files):
+def get_release_basics(audio_files):
     logging.info("***** BEGIN get_release_basics() *****")
     artists = []
     album = None
     audio_format = None
     year = None
-    for music_filepath in music_files:
+    for music_filepath in audio_files:
         music_filename = os.path.basename(os.path.normpath(music_filepath))
         logging.info("checking %s", music_filename)
         tags = {}
@@ -119,9 +123,9 @@ def get_release_basics(music_files):
     logging.debug("most_common_artist: %s", most_common_artist)
     # replace non alpha-numeric characters with space to avoid search misses for symbols
     if album:
-        album = re.sub('\W', ' ', album)
+        album = re.sub(r'\W', ' ', album)
     if most_common_artist:
-        most_common_artist = re.sub('\W', ' ', most_common_artist)
+        most_common_artist = re.sub(r'\W', ' ', most_common_artist)
     # return the basic info
     basic_info = {
         "artist": most_common_artist,
@@ -137,33 +141,17 @@ def get_release_basics(music_files):
 def find_releases(path):
     logging.info("***** BEGIN find_releases() *****")
     # traverse paths
-    for dirpath, subdirs, _ in os.walk(path, topdown=True):
-        logging.info("***** BEGIN processing for %s *****", dirpath)
-        # only continue for paths that are not a disc subfolder
-        path_tail = os.path.basename(os.path.normpath(dirpath))
-        logging.debug("path_tail is '%s'", path_tail)
-        if not is_disc_subfolder(path_tail):
-            logging.debug("'%s' is deemed as not a disc subfolder", path_tail)
-            # create list of subfolders that are disc subfolders
-            disc_subfolders = [ s for s in subdirs if is_disc_subfolder(s) ]
-            logging.debug("%s has the following disc subfolders: %s", path_tail, disc_subfolders)
-            # if the current path is a leaf, or has disc subfolders
-            if len(subdirs) == 0 or len(disc_subfolders) > 0:
-                logging.debug("%s is a leaf or has disc subfolders", dirpath)
-                # get all music files (recursively)
-                music_files = find_music_files(dirpath)
-                logging.info("%s music files found", len(music_files))
-                if len(music_files) > 0:
-                    logging.info("music files: %s", [ os.path.basename(os.path.normpath(m)) for m in music_files ])
-                    yield {
-                        "dirpath": dirpath,
-                        "dirpath_simplified": simplify_album(os.path.basename(os.path.normpath(dirpath))),
-                        "music_files": music_files,
-                        "all_files": find_all_files(dirpath)
-                    }
-            else:
-                logging.debug("%s has subfolders that aren't disc subfolders. Skipping individual processing", path_tail)
-        else:
-            logging.debug("%s is deemed as a disc subfolder. Skipping individiual processing", path_tail)
-        logging.info("***** END processing for %s *****", dirpath)
+    for dirpath, _, filenames in os.walk(path, topdown=True):
+        # check for presence of music files
+        for fn in filenames:
+            audio_files = [ os.path.join(dirpath, fn) for fn in filenames if is_audio_file(fn) ]
+        logging.info("%s audio files found", len(audio_files))
+        if len(audio_files) > 0:
+            logging.info("audio files: %s", [ os.path.basename(os.path.normpath(m)) for m in audio_files ])
+            yield {
+                "dirpath": dirpath,
+                "dirpath_simplified": simplify_album(os.path.basename(os.path.normpath(dirpath))),
+                "audio_files": audio_files,
+                "all_files": find_all_files(dirpath)
+            }
     logging.info("***** END find_releases() *****")
