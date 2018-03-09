@@ -2,6 +2,7 @@
 import logging
 import os
 import html
+import re
 
 # imports: custom
 import musicscan.findmusiclocal
@@ -13,6 +14,8 @@ def parse_torrent_files(file_list):
     logging.debug("list_filenamesize: %s", list_filenamesize)
     files = []
     for filenamesize in list_filenamesize:
+        # strip out weird Atilde
+        filenamesize = re.sub(r'\ *&Atilde{{{', '{{{', filenamesize)
         # pick out filename and filesize
         filename, filesize = filenamesize.split("{{{")
         # html unescape the filename
@@ -75,10 +78,30 @@ def match_torrent_files(torrent_files, release):
     filesize_matches = list(set(torrent_file_sizes).intersection(set(local_file_sizes)))
     filename_matches = list(set(torrent_file_names).intersection(set(local_file_names)))
     # calculate matches percentage
-    audio_filesize_matches_pct = round(100 * len(audio_filesize_matches) / len(torrent_audio_file_sizes), 2)
-    filesize_matches_pct = round(100 * len(filesize_matches) / len(torrent_files), 2)
-    filename_matches_pct = round(100 * len(filename_matches) / len(torrent_files), 2)
-
+    try:
+        audio_filesize_matches_pct = round(100 * len(audio_filesize_matches) / len(torrent_audio_file_sizes), 2)
+    except ZeroDivisionError:
+        logging.error("torrent_audio_file_sizes = 0")
+        audio_filesize_matches_pct = 0
+    except Exception as e:
+        logging.error("failed calculating percentage. %s", e)
+        audio_filesize_matches_pct = 0
+    try:
+        filesize_matches_pct = round(100 * len(filesize_matches) / len(torrent_files), 2)
+    except ZeroDivisionError:
+        logging.error("torrent_files = 0")
+        filesize_matches_pct = 0
+    except Exception as e:
+        logging.error("failed calculating percentage. %s", e)
+        filesize_matches_pct = 0
+    try:
+        filename_matches_pct = round(100 * len(filename_matches) / len(torrent_files), 2)
+    except ZeroDivisionError:
+        logging.error("torrent_files = 0")
+        filename_matches_pct = 0
+    except Exception as e:
+        logging.error("failed calculating percentage. %s", e)
+        filename_matches_pct = 0
     
     matches = {
             "audio_filesize_matches_pct": audio_filesize_matches_pct,
