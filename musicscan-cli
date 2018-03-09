@@ -243,7 +243,7 @@ def main():
                 # iterate through torrents in the group
                 for group_torrent in group_torrents:
                     print("---- checking torrent {0}".format(group_torrent["torrentId"]))
-                    torrent_object = api.get_torrent_object(group_torrent["torrentId"])
+                    torrent_object = api.torrent(group_torrent["torrentId"])
                     torrent_filepath_unescaped = html.unescape(torrent_object.get("filePath", "missing_filePath"))
                     print("----- torrent filePath: {0}".format(torrent_filepath_unescaped))
                     # parse torrent file list

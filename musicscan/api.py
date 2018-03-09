@@ -38,7 +38,7 @@ class WhatAPIExtended(whatapi.WhatAPI):
         return results
 
     # get torrent object by id
-    def get_torrent_object(self, torrent_id):
+    def torrent(self, torrent_id):
         torrent_object = {}
         logging.info("Getting torrent by id: %s", torrent_id)
         torrent_lookup = self.request(
