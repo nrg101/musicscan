@@ -54,7 +54,7 @@ def find_all_files(path):
 
 
 def is_disc_subfolder(dirname):
-    return DISC_SUBFOLDER_REGEX.match(dirname)
+    return DISC_SUBFOLDER_REGEX.search(dirname)
 
 
 """
