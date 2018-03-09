@@ -38,7 +38,7 @@ def is_music_file(filename):
 def find_music_files(path):
     music_files = []
     # traverse all files in path
-    for dirpath, subdirs, filenames in os.walk(path):
+    for dirpath, _, filenames in os.walk(path):
         # list comprehension of music files, extend music_files list
         music_files.extend([ os.path.join(dirpath, f) for f in filenames if is_music_file(f) ])
     return music_files
@@ -47,7 +47,7 @@ def find_music_files(path):
 def find_all_files(path):
     all_files = []
     # traverse all files in path
-    for dirpath, subdirs, filenames in os.walk(path):
+    for dirpath, _, filenames in os.walk(path):
         # list comprehension of all files, extend all_files list
         all_files.extend([ os.path.join(dirpath, f) for f in filenames ])
     return all_files
@@ -131,7 +131,7 @@ def get_release_basics(music_files):
 def find_releases(path):
     logging.info("***** BEGIN find_releases() *****")
     # traverse paths
-    for dirpath, subdirs, filenames in os.walk(path, topdown=True):
+    for dirpath, subdirs, _ in os.walk(path, topdown=True):
         logging.info("***** BEGIN processing for %s *****", dirpath)
         # only continue for paths that are not a disc subfolder
         path_tail = os.path.basename(os.path.normpath(dirpath))

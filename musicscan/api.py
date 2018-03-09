@@ -61,39 +61,38 @@ class WhatAPIExtended(whatapi.WhatAPI):
         # initialise results
         results = []
         # whatapi search
-        # try searching for artist, album and year
+        # try searching for artist and album
         if release["tags"]["album"] != None:
             logging.info(
-                    "Searching by Artist '%s'. Album name '%s'. Year = %s. Format = %s",
+                    "Searching by Artist '%s'. Album name '%s'. Format = %s",
                     release["tags"]["artist"],
                     release["tags"]["album"],
-                    release["tags"]["year"],
                     release["tags"]["audio_format"]
             )
             search = self.request(
                     'browse',
                     artistname=release["tags"]["artist"],
                     groupname=release["tags"]["album"],
-                    year=release["tags"]["year"],
                     format=release["tags"]["audio_format"]
             )
             results = self._get_results(search)
         # if no results yet, search by album name (and year and format if present)
-        logging.debug('release["tags"]["album"]: %s', release["tags"]["album"])
-        if release["tags"]["album"] != None:
-            logging.info(
-                    "Searching by album name '%s'. Year = %s. Format = %s",
-                    release["tags"]["album"],
-                    release["tags"]["year"],
-                    release["tags"]["audio_format"]
-            )
-            search = self.request(
-                    'browse',
-                    groupname=release["tags"]["album"],
-                    year=release["tags"]["year"],
-                    format=release["tags"]["audio_format"]
-            )
-            results = self._get_results(search)
+        if len(results) == 0:
+            logging.debug('release["tags"]["album"]: %s', release["tags"]["album"])
+            if release["tags"]["album"] != None:
+                logging.info(
+                        "Searching by album name '%s'. Year = %s. Format = %s",
+                        release["tags"]["album"],
+                        release["tags"]["year"],
+                        release["tags"]["audio_format"]
+                )
+                search = self.request(
+                        'browse',
+                        groupname=release["tags"]["album"],
+                        year=release["tags"]["year"],
+                        format=release["tags"]["audio_format"]
+                )
+                results = self._get_results(search)
         # if no results yet, search by artist and year (and format if present)
         if len(results) == 0:
             if release["tags"]["artist"] != None and release["tags"]["year"] != None:
