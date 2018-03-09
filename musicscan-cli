@@ -6,6 +6,8 @@ import json
 import sys
 import html
 from collections import Counter
+import os
+import re
 
 # imports: third party
 from colorama import Fore, init
@@ -136,7 +138,25 @@ def search_and_match(api, release, music_threshold, searched_torrent_ids, **kwar
 
 
 def generate_searches(release):
-    return [
+    """
+    search 1: artist, album, format
+    search 2: album, year, format
+    search 3: directory name, year, format
+    search 4: directory name, format
+    """
+    # remove disc stuff and some symbols from the folder name
+    dirpath_simplified = musicscan.findmusiclocal.simplify_album(
+            os.path.basename(os.path.normpath(release["dirpath"]))
+    )
+    logging.info("dirpath_simplified (simplify_album) = '%s'", dirpath_simplified)
+    # replace non alpha-numeric characters with spaces
+    dirpath_simplified = re.sub(r'\W', ' ', dirpath_simplified)
+    logging.info("dirpath_simplified (re.sub) = '%s'", dirpath_simplified)
+    # check if string contains at least some characters
+    if not re.search(r'\w{3,}\ ?\w{3,}', dirpath_simplified):
+        dirpath_simplified = None
+    # build searches
+    searches = [
             dict(
                     artistname=release["tags"]["artist"],
                     groupname=release["tags"]["album"],
@@ -148,10 +168,22 @@ def generate_searches(release):
                     format=release["tags"]["audio_format"]
             ),
             dict(
-                    groupname=release["tags"]["album"],
+                    searchstr=dirpath_simplified,
+                    year=release["tags"]["year"],
+                    format=release["tags"]["audio_format"]
+            ),
+            dict(
+                    searchstr=dirpath_simplified,
                     format=release["tags"]["audio_format"]
             )
     ]
+    logging.debug("generated searches (before filtering):\n%s", json.dumps(searches, indent=2))
+    # remove searches with None values
+    searches = [ s for s in searches if None not in s.values() ]
+    logging.debug("generated searches (after filtering):\n%s", json.dumps(searches, indent=2))
+    # return
+    return searches
+
 
 
 def process_release(release, api, music_threshold, processed_dirs):
