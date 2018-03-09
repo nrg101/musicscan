@@ -1,6 +1,7 @@
 # imports: standard
 import logging
 import os
+import html
 
 # imports: custom
 import musicscan.findmusiclocal
@@ -14,6 +15,9 @@ def parse_torrent_files(file_list):
     for filenamesize in list_filenamesize:
         # pick out filename and filesize
         filename, filesize = filenamesize.split("{{{")
+        # html unescape the filename
+        filename = html.unescape(filename)
+        # pick out filesize
         filesize = filesize[:-3]
         logging.debug("filename = {0}, filesize = {1}".format(filename, filesize))
         files.append({
