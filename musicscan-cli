@@ -156,21 +156,17 @@ def generate_searches(release):
     # check if string contains at least some characters
     if not SHORTEST_ALBUM_DIR_REGEX.search(dirpath_simplified):
         dirpath_simplified = None
-    # attempt to clean album name
-    album_simplified = musicscan.findmusiclocal.simplify_album(release["tags"]["album"])
-    if not SHORTEST_ALBUM_DIR_REGEX.search(album_simplified):
-        album_simplified = None
     # build searches
     searches = [
             dict(
                     artistname=release["tags"]["artist"],
-                    groupname=album_simplified,
+                    groupname=release["tags"]["album"],
                     format=release["tags"]["audio_format"],
                     haslog=release["has_log"],
                     hascue=release["has_cue"]
             ),
             dict(
-                    groupname=album_simplified,
+                    groupname=release["tags"]["album"],
                     year=release["tags"]["year"],
                     format=release["tags"]["audio_format"],
                     haslog=release["has_log"],
