@@ -271,6 +271,22 @@ def main():
             "inputpath",
             help="path to scan"
     )
+    # directory threshold
+    parser.add_argument(
+            '-d', '--dirsmax',
+            metavar='COUNT',
+            type=int,
+            default=12,
+            help='maximum number of subdirectories per directory (default: %(default)s)'
+    )
+    # file threshold
+    parser.add_argument(
+            '-f', '--filesmax',
+            metavar='COUNT',
+            type=int,
+            default=50,
+            help='maximum number of files per directory (default: %(default)s)'
+    )
     # log level
     parser.add_argument(
             '-l', '--loglevel',
@@ -342,6 +358,8 @@ def main():
     output_path = args.output
     music_threshold = args.threshold
     reset_processed_dirs = args.reset
+    files_max = args.filesmax
+    dirs_max = args.dirsmax
 
     # set up logging
     numeric_level = getattr(logging, loglevel.upper(), None)
@@ -395,7 +413,7 @@ def main():
 
 
     # find local releases (directories with music files)
-    for release in musicscan.findmusiclocal.find_releases(root_path):
+    for release in musicscan.findmusiclocal.find_releases(root_path, files_max, dirs_max):
         logging.info("release:\n%s", json.dumps(release, indent=2))
         process_release(release, api, music_threshold, processed_dirs)
 

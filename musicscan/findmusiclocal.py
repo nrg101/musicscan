@@ -161,14 +161,18 @@ def get_release_basics(audio_files):
     return basic_info
 
 
-def find_releases(path):
+def find_releases(path, files_max, dirs_max):
     logging.info("***** BEGIN find_releases() *****")
     # traverse paths
     for dirpath, subdirs, filenames in os.walk(path, topdown=True):
         logging.info("*" * SEPARATOR_WIDTH)
         logging.info("os.walk: %s", dirpath)
         logging.info("*" * SEPARATOR_WIDTH)
+        # check number of subdirs and files are within thresholds
         logging.info("%s has %s subdirs and %s filenames", dirpath, len(subdirs), len(filenames))
+        if len(subdirs) > dirs_max or len(filenames) > files_max:
+            logging.info("threshold(s) breached: %s > %s or %s > %s",
+                    len(subdirs), dirs_max, len(filenames), files_max)
         # check for presence of music files
         audio_files = [ os.path.join(dirpath, fn) for fn in filenames if is_audio_file(fn) ]
         logging.info("%s audio files found", len(audio_files))
