@@ -160,13 +160,13 @@ def generate_searches(release):
     searches = [
             dict(
                     artistname=release["tags"]["artist"],
-                    groupname=release["tags"]["album"],
+                    groupname=musicscan.findmusiclocal.simplify_album(release["tags"]["album"]),
                     format=release["tags"]["audio_format"],
                     haslog=release["has_log"],
                     hascue=release["has_cue"]
             ),
             dict(
-                    groupname=release["tags"]["album"],
+                    groupname=musicscan.findmusiclocal.simplify_album(release["tags"]["album"]),
                     year=release["tags"]["year"],
                     format=release["tags"]["audio_format"],
                     haslog=release["has_log"],
