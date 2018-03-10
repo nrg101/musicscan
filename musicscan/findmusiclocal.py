@@ -18,6 +18,7 @@ SIMPLIFY_ALBUM_REGEX = re.compile(
         r'(flac|wav|ogg|aac|m4a|m4b|m4p|mp4|mp3|v0|v1|v2|v3|320|256|224|192|128|96|64|48)|((19|20)\d{2})|(cd|disc|disk) ?\d+|[\[\]\(\)\-_]',
         flags=re.IGNORECASE
 )
+SEPARATOR_WIDTH = 60
 
 def simplify_album(album):
     # remove (), [], cd x, disc x, and resulting whitespace at ends
@@ -164,18 +165,22 @@ def find_releases(path):
     logging.info("***** BEGIN find_releases() *****")
     # traverse paths
     for dirpath, subdirs, filenames in os.walk(path, topdown=True):
-        logging.info("%s has %s subdirs and %s filenames", path, len(subdirs), len(filenames))
+        logging.info("*" * SEPARATOR_WIDTH)
+        logging.info("os.walk: %s", dirpath)
+        logging.info("*" * SEPARATOR_WIDTH)
+        logging.info("%s has %s subdirs and %s filenames", dirpath, len(subdirs), len(filenames))
         # check for presence of music files
-        for fn in filenames:
-            audio_files = [ os.path.join(dirpath, fn) for fn in filenames if is_audio_file(fn) ]
+        audio_files = [ os.path.join(dirpath, fn) for fn in filenames if is_audio_file(fn) ]
         logging.info("%s audio files found", len(audio_files))
+        # all files
+        all_files = [ os.path.join(dirpath, fn) for fn in filenames ]
         if len(audio_files) > 0:
             logging.info("audio files: %s", [ os.path.basename(os.path.normpath(m)) for m in audio_files ])
             yield {
                 "dirpath": dirpath,
                 "dirpath_simplified": simplify_album(os.path.basename(os.path.normpath(dirpath))),
                 "audio_files": audio_files,
-                "all_files": [ os.path.join(dirpath, fn) for fn in filenames ],
+                "all_files": all_files,
                 "has_log": has_log(filenames),
                 "has_cue": has_cue(filenames)
             }
