@@ -83,11 +83,11 @@ def get_group_torrents(group):
 
 
 # search API and attempt to match
-def search_and_match(api, release, music_threshold, searched_torrent_ids, **kwargs):
+def search_and_match(api, release, music_threshold, searched_torrent_ids, max_search_results, **kwargs):
     # initialise
     search_match_evaluations = []
     # perform search
-    search_result = api.torrent_search(**kwargs)
+    search_result = api.torrent_search(max_search_results, **kwargs)
     print("-- search result groups: {0}".format(len(search_result)))
     # show each torrent group
     for group in search_result:
@@ -195,7 +195,7 @@ def generate_searches(release):
 
 
 
-def process_release(release, api, music_threshold, processed_dirs):
+def process_release(release, api, music_threshold, processed_dirs, max_search_results):
     # initialise list of match evaluations for this release
     release_match_evaluations = []
     # initialise set of searched IDs for this release
@@ -220,7 +220,8 @@ def process_release(release, api, music_threshold, processed_dirs):
             print("- searching API for: {0}".format(
                     ", ".join([ "{0}={1}".format(k,v) for k,v in search_fields.items() ])
             ))
-            search_matches = search_and_match(api, release, music_threshold, release_searched_ids, **search_fields)
+            search_matches = search_and_match(api, release, music_threshold,
+                    release_searched_ids, max_search_results, **search_fields)
             # show evaluation counts
             counts = Counter(search_matches["evaluations"])
             print("{color}---- match summary. full: {0}, partial: {1}, no match: {2}".format(
@@ -295,6 +296,14 @@ def main():
             choices=['debug', 'info', 'warning', 'error', 'critical'],
             help='loglevel for log file (default: %(default)s)'
     )
+    # max search results threshold
+    parser.add_argument(
+            '-m', '--maxsearch',
+            metavar='COUNT',
+            type=int,
+            default=100,
+            help='maximum number of search results (default: %(default)s)'
+    )
     # output directory for downloaded torrent files
     parser.add_argument(
             '-o', '--output',
@@ -360,6 +369,7 @@ def main():
     reset_processed_dirs = args.reset
     files_max = args.filesmax
     dirs_max = args.dirsmax
+    max_search_results = args.maxsearch
 
     # set up logging
     numeric_level = getattr(logging, loglevel.upper(), None)
@@ -414,8 +424,9 @@ def main():
 
     # find local releases (directories with music files)
     for release in musicscan.findmusiclocal.find_releases(root_path, files_max, dirs_max):
-        logging.info("release:\n%s", json.dumps(release, indent=2))
-        process_release(release, api, music_threshold, processed_dirs)
+        if release:
+            logging.info("release:\n%s", json.dumps(release, indent=2))
+            process_release(release, api, music_threshold, processed_dirs, max_search_results)
 
     # show summary
     print("*" * SEPARATOR_WIDTH)
