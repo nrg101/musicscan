@@ -94,22 +94,40 @@ class WhatAPIExtended(whatapi.WhatAPI):
 
     # set torrent file save path
     def set_torrent_file_save_path(self, path):
-        self.torrent_file_save_path = path
+        save_path_is_ok = True
+        # check/create subdirectories
+        for subdir in ['full', 'partial']:
+            save_path_subdir = os.path.join(path, subdir)
+            try:
+                os.makedirs(save_path_subdir)
+            except Exception as e:
+                logging.error("Could not create directory: %s. %s", save_path_subdir, e)
+                save_path_is_ok = False
+        # if that went ok, set save path
+        if save_path_is_ok:
+            self.torrent_file_save_path = path
+        # return success or not
+        return save_path_is_ok
+
     
     # save torrent to file
-    def save_torrent(self, torrent_id, torrent_filename):
+    def save_torrent(self, torrent_id, torrent_filename, match_evaluation):
         # download torrent file (contents)
         torrent_file_contents = self.get_torrent(torrent_id)
         # save torrent to file
+        saved_successfully = False
         try:
             with open(os.path.join(self.torrent_file_save_path, torrent_filename), 'wb') as torrent_file:
                 torrent_file.write(torrent_file_contents)
+            saved_successfully = True
         except Exception as e:
             logging.error('Saving %s failed. %s', torrent_filename, e)
         else:
             logging.info('Saving %s succeeded', torrent_filename)
             # increment count
             self.torrent_files_written += 1
+        # return success (True or False)
+        return saved_successfully
 
 
 # parse config file (as whatapi configparser import is incorrect for Python 3)
