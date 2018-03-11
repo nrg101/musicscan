@@ -56,7 +56,7 @@ class WhatAPIExtended(whatapi.WhatAPI):
 
 
     # torrent search
-    def torrent_search(self, **kwargs):
+    def torrent_search(self, max_search_results, **kwargs):
         logging.info("**** BEGIN torrent_search() *****")
         # initialise results
         results = []
@@ -81,6 +81,12 @@ class WhatAPIExtended(whatapi.WhatAPI):
                     results.extend(self._get_results(search))
                 except Exception as e:
                     logging.error("Could not combine subsequent search page results. %s", e)
+                # check number of results against threshold
+                if len(results) >= max_search_results:
+                    # truncate results to max
+                    del results[max_search_results:]
+                    # break out of any more pages
+                    break
         # return search
         logging.debug("Search results:\n%s", json.dumps(results, indent=4))
         return results
