@@ -63,13 +63,15 @@ def get_processed_dirs():
     return lines
 
 
-def download_torrent_file(torrent_id, torrent_name, api):
+def download_torrent_file(torrent_id, torrent_name, api, match_evaluation):
     # set torrent filename
     torrent_filename = '{0}.{1}.torrent'.format(torrent_name, torrent_id)
     print("------- Downloading torrent file: '{0}'".format(torrent_filename))
     # save torrent file
     logging.info("Saving torrent file: '%s'", torrent_filename)
-    api.save_torrent(torrent_id, torrent_filename)
+    saved_successfully = api.save_torrent(torrent_id, torrent_filename, match_evaluation)
+    if not saved_successfully:
+        print("{0}-------- Saving file failed!".format(Fore.RED))
 
 
 def get_group_torrents(group):
@@ -126,7 +128,8 @@ def search_and_match(api, release, music_threshold, searched_torrent_ids, max_se
                 if match_evaluation:
                     print("------ match = {0}".format(match_evaluation))
                     # save torrent
-                    download_torrent_file(group_torrent["torrentId"], torrent_filepath_unescaped, api)
+                    download_torrent_file(group_torrent["torrentId"],
+                            torrent_filepath_unescaped,api, match_evaluation)
                 # append to list
                 search_match_evaluations.append(match_evaluation)
                 searched_torrent_ids.add(group_torrent["torrentId"])
@@ -418,9 +421,16 @@ def main():
         print("API connection established")
         logging.info("API connection success")
     
+    
     # set torrent file save path
-    api.set_torrent_file_save_path(output_path)
-
+    print("Setting torrent save path...")
+    save_path_ok = api.set_torrent_file_save_path(output_path)
+    if save_path_ok:
+        print("OK")
+    else:
+        print("FAILED")
+        sys.exit(1)
+    
 
     # find local releases (directories with music files)
     for release in musicscan.findmusiclocal.find_releases(root_path, files_max, dirs_max):
