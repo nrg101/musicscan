@@ -421,9 +421,16 @@ def main():
         print("API connection established")
         logging.info("API connection success")
     
+    
     # set torrent file save path
+    print("Setting torrent save path...")
     save_path_ok = api.set_torrent_file_save_path(output_path)
-
+    if save_path_ok:
+        print("OK")
+    else:
+        print("FAILED")
+        sys.exit(1)
+    
 
     # find local releases (directories with music files)
     for release in musicscan.findmusiclocal.find_releases(root_path, files_max, dirs_max):

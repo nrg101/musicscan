@@ -100,6 +100,12 @@ class WhatAPIExtended(whatapi.WhatAPI):
             save_path_subdir = os.path.join(path, subdir)
             try:
                 os.makedirs(save_path_subdir)
+            except FileExistsError:
+                logging.info("Save path '%s' already exists", save_path_subdir)
+                # check if existing directory is not writeable
+                if not os.access(save_path_subdir, os.W_OK | os.X_OK):
+                    logging.error("Directory '%s' is not writeable", save_path_subdir)
+                    save_path_is_ok = False
             except Exception as e:
                 logging.error("Could not create directory: %s. %s", save_path_subdir, e)
                 save_path_is_ok = False

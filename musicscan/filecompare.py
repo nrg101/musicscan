@@ -7,6 +7,8 @@ import re
 # imports: custom
 import musicscan.findmusiclocal
 
+FILENAMESIZE_REGEX = re.compile(r"^(.+)\{\{\{(\d+)\}\}\}$")
+
 # parse fileList string into a list of files (name and size)
 def parse_torrent_files(file_list):
     # split string into list of strings: "FILENAME{{{FILESIZE}}}"
@@ -15,13 +17,13 @@ def parse_torrent_files(file_list):
     files = []
     for filenamesize in list_filenamesize:
         # strip out weird Atilde
-        filenamesize = re.sub(r'\ *&Atilde{{{', '{{{', filenamesize)
+        filenamesize = re.sub(r'\ *&Atilde', '', filenamesize)
         # pick out filename and filesize
-        filename, filesize = filenamesize.split("{{{")
+        match = FILENAMESIZE_REGEX.match(filenamesize)
+        filename = match.group(1)
+        filesize = match.group(2)
         # html unescape the filename
         filename = html.unescape(filename)
-        # pick out filesize
-        filesize = filesize[:-3]
         logging.debug("filename = {0}, filesize = {1}".format(filename, filesize))
         files.append({
                 "name": filename,
