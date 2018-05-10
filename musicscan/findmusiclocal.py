@@ -116,25 +116,26 @@ def get_release_basics(audio_files):
             if getattr(tags, "mime", None) and 'audio/flac' in tags.mime:
                 logging.debug("audio/flac found in mime tag")
                 audio_format = 'FLAC'
-        if "albumartist" in tags:
-            logging.debug("adding %s to artists", tags["albumartist"])
-            artists += tags["albumartist"]
-        elif "artist" in tags:
-            logging.debug("adding %s to artists", tags["artist"])
-            artists += tags["artist"]
-        if "album" in tags:
-            album = simplify_album(tags["album"][0])
-            logging.debug("found album title: %s", album)
-        if "date" in tags:
-            logging.debug("parsing date from %s", tags["date"])
-            try:
-                year = dtparse(tags['date'][0][:7]).year
-            except ValueError as e:
-                logging.error("no date could be found. %s", e)
-            except Exception as e:
-                logging.error("error parsing year from %s. %s", tags["date"], e)
-            else:
-                logging.debug("found year: %s", year)
+        if tags is not None:
+            if "albumartist" in tags:
+                logging.debug("adding %s to artists", tags["albumartist"])
+                artists += tags["albumartist"]
+            elif "artist" in tags:
+                logging.debug("adding %s to artists", tags["artist"])
+                artists += tags["artist"]
+            if "album" in tags:
+                album = simplify_album(tags["album"][0])
+                logging.debug("found album title: %s", album)
+            if "date" in tags:
+                logging.debug("parsing date from %s", tags["date"])
+                try:
+                    year = dtparse(tags['date'][0][:7]).year
+                except ValueError as e:
+                    logging.error("no date could be found. %s", e)
+                except Exception as e:
+                    logging.error("error parsing year from %s. %s", tags["date"], e)
+                else:
+                    logging.debug("found year: %s", year)
     # determine most common artist
     if len(artists) > 0:
         logging.debug("determining most common artist in %s", artists)
