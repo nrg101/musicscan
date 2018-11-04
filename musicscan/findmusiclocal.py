@@ -166,6 +166,9 @@ def find_releases(path, files_max, dirs_max):
     logging.info("***** BEGIN find_releases() *****")
     # traverse paths
     for dirpath, subdirs, filenames in os.walk(path, topdown=True):
+        # sort subdirectories in-place
+        subdirs.sort()
+        
         logging.info("*" * SEPARATOR_WIDTH)
         logging.info("os.walk: %s", dirpath)
         logging.info("*" * SEPARATOR_WIDTH)
