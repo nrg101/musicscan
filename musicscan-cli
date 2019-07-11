@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # imports: standard
 import logging
@@ -12,7 +13,7 @@ import re
 # imports: third party
 from colorama import Fore, init
 
-# imports: custom
+# imports: custom
 import musicscan
 
 
@@ -64,10 +65,10 @@ def get_processed_dirs():
 
 
 def download_torrent_file(torrent_id, torrent_name, api, match_evaluation):
-    # set torrent filename
+    # set torrent filename
     torrent_filename = '{0}.{1}.torrent'.format(torrent_name, torrent_id)
     print("------- Downloading torrent file: '{0}'".format(torrent_filename))
-    # save torrent file
+    # save torrent file
     logging.info("Saving torrent file: '%s'", torrent_filename)
     saved_successfully = api.save_torrent(torrent_id, torrent_filename, match_evaluation)
     if not saved_successfully:
@@ -91,7 +92,7 @@ def search_and_match(api, release, music_threshold, searched_torrent_ids, max_se
     # perform search
     search_result = api.torrent_search(max_search_results, **kwargs)
     print("-- search result groups: {0}".format(len(search_result)))
-    # show each torrent group
+    # show each torrent group
     for group in search_result:
         # get torrents from group
         group_torrents = get_group_torrents(group)
@@ -102,7 +103,7 @@ def search_and_match(api, release, music_threshold, searched_torrent_ids, max_se
                 torrent_count = len(group_torrents),
                 torrent_plural = "torrent" if len(group_torrents) == 1 else "torrents"
         ))
-        # iterate through torrents in the group
+        # iterate through torrents in the group
         for group_torrent in group_torrents:
             if group_torrent["torrentId"] in searched_torrent_ids:
                 print("---- skipping torrent {0}, as already checked".format(group_torrent["torrentId"]))
@@ -113,7 +114,7 @@ def search_and_match(api, release, music_threshold, searched_torrent_ids, max_se
                 print("----- torrent filePath: {0}".format(torrent_filepath_unescaped))
                 # parse torrent file list
                 torrent_files = musicscan.filecompare.parse_torrent_files(torrent_object["fileList"])
-                # attempt to match torrent files to local files
+                # attempt to match torrent files to local files
                 torrent_match = musicscan.filecompare.match_torrent_files(torrent_files, release)
                 # evaluate match
                 match_evaluation = musicscan.filecompare.evaluate_match(torrent_match, music_threshold)
@@ -199,7 +200,7 @@ def generate_searches(release):
 
 
 def process_release(release, api, music_threshold, processed_dirs, max_search_results):
-    # initialise list of match evaluations for this release
+    # initialise list of match evaluations for this release
     release_match_evaluations = []
     # initialise set of searched IDs for this release
     release_searched_ids = set()
@@ -235,7 +236,7 @@ def process_release(release, api, music_threshold, processed_dirs, max_search_re
             if "full" in release_match_evaluations:
                 # break out of for loop to abort further searches
                 break
-            # add searched IDs to set (to avoid repeating checking the same torrents)
+            # add searched IDs to set (to avoid repeating checking the same torrents)
             release_searched_ids.update(search_matches["torrent_ids"])
 
         # end of processing of this release
@@ -244,7 +245,7 @@ def process_release(release, api, music_threshold, processed_dirs, max_search_re
 
 
 def main():
-    # argparse
+    # argparse
     import argparse
 
     # initialise colorama
@@ -360,7 +361,7 @@ def main():
     )
     # parse arguments
     args = parser.parse_args()
-    # set variables from args
+    # set variables from args
     root_path = args.inputpath
     loglevel = args.loglevel
     config_file = args.config
@@ -397,7 +398,7 @@ def main():
     # if separate credentials given, disable config file
     if username and password:
         config_file = None
-    # temporary hack: parse config file (whatapi config parser broken for python3)
+    # temporary hack: parse config file (whatapi config parser broken for python3)
     else:
         username, password = musicscan.api.get_username_and_password(config_file)
         config_file = None
@@ -415,7 +416,7 @@ def main():
     except Exception as e:
         print("API connection failed")
         logging.error("API connection failed. %s", e)
-        # bail
+        # bail
         sys.exit(1)
     else:
         print("API connection established")
@@ -432,13 +433,13 @@ def main():
         sys.exit(1)
     
 
-    # find local releases (directories with music files)
+    # find local releases (directories with music files)
     for release in musicscan.findmusiclocal.find_releases(root_path, files_max, dirs_max):
         if release:
             logging.info("release:\n%s", json.dumps(release, indent=2))
             process_release(release, api, music_threshold, processed_dirs, max_search_results)
 
-    # show summary
+    # show summary
     print("*" * SEPARATOR_WIDTH)
     print("Summary:\n")
     print("torrent files saved: {0}".format(api.torrent_files_written))
