@@ -123,7 +123,7 @@ class WhatAPIExtended(whatapi.WhatAPI):
         # save torrent to file
         saved_successfully = False
         try:
-            with open(os.path.join(self.torrent_file_save_path, torrent_filename), 'wb') as torrent_file:
+            with open(os.path.join(self.torrent_file_save_path, match_evaluation, torrent_filename), 'wb') as torrent_file:
                 torrent_file.write(torrent_file_contents)
             saved_successfully = True
         except Exception as e:
