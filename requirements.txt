@@ -1,3 +1,4 @@
+wheel
 mutagen==1.40.0
 python-dateutil==2.6.1
 colorama
